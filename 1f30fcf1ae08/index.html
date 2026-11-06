@@ -1,0 +1,185 @@
+<!doctype html><html lang="zh"><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta http-equiv="refresh" content="300"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pa300 · GPT 逐首编配看板</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--line:#262b36;--fg:#e9edf3;--mut:#8b93a3;--ok:#3ecf8e;--warn:#f5b54a;--bad:#ff6b6b;--acc:#7aa2ff;--run:#b48cff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,"PingFang SC","Helvetica Neue",sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:18px 14px 60px}
+h1{font-size:22px;margin:0 0 2px;letter-spacing:.5px}.sub{color:var(--mut);font-size:13px}
+.status{margin:14px 0;padding:12px 14px;border-radius:12px;background:linear-gradient(90deg,#1d2330,#171a21);border:1px solid var(--line);font-size:15px}
+.top{display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px}@media(max-width:640px){.top{grid-template-columns:1fr 1fr}.top .wide{grid-column:1/-1}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.ring{position:relative;width:120px;max-width:100%;margin:0 auto}.ring svg{width:120px;height:120px;transform:rotate(-90deg)}
+.trk{fill:none;stroke:#252a35;stroke-width:9}.val{fill:none;stroke-width:9;stroke-linecap:round}.stopdot{fill:var(--fg)}
+.rv{position:absolute;inset:0;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center}.rv b{font-size:24px}.rv span{font-size:12px;color:var(--mut)}
+.rs{text-align:center;font-size:12px;color:var(--mut);margin-top:4px}
+.big{font-size:34px;font-weight:700}.big small{font-size:15px;color:var(--mut);font-weight:400}
+.bar{height:10px;border-radius:6px;background:#252a35;overflow:hidden;margin:10px 0 6px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--ok))}
+.kv{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mut)}.kv b{color:var(--fg)}
+.mapg{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:5px;margin-top:10px}
+.cell{aspect-ratio:1;border-radius:6px;background:#252a35;display:flex;align-items:center;justify-content:center;font-size:11px;color:#0009;font-weight:600}
+.cell.done{background:var(--ok)}.cell.part{background:var(--warn)}.cell.fail{background:var(--bad)}.cell.run{background:var(--run);animation:pulse 1.4s infinite}.cell.gridfix{background:#3a3f4b;color:#fff5}.cell.todo{color:#fff4}
+@keyframes pulse{50%{opacity:.45}}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:8px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 10px}.tools input{flex:1;min-width:180px;background:var(--card);border:1px solid var(--line);color:var(--fg);border-radius:10px;padding:10px 12px;font-size:15px}
+.tools button{background:var(--card);border:1px solid var(--line);color:var(--mut);border-radius:20px;padding:6px 12px;font-size:13px}.tools button.on{color:var(--fg);border-color:var(--acc)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;border-left:4px solid #333}
+.card.done{border-left-color:var(--ok)}.card.part{border-left-color:var(--warn)}.card.fail{border-left-color:var(--bad)}.card.run{border-left-color:var(--run)}.card.gridfix{opacity:.55}.card.focus{box-shadow:0 0 0 2px var(--acc)}
+.card header{display:flex;align-items:center;gap:10px}.no{font-size:12px;color:var(--mut);width:22px}.tt{flex:1;display:flex;flex-direction:column}.tt small{color:var(--mut);font-size:12px}
+.emo{margin:6px 0 2px;font-size:13px;color:#c9d3ff}
+.chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.chip{font-size:12px;padding:3px 8px;border-radius:12px;background:#222733;color:var(--mut)}
+.chip.ok{background:#173a2b;color:var(--ok)}.chip.fail{background:#3b1c1f;color:var(--bad)}.chip.skip{background:#24262c;color:#6b7280}
+details.more{margin-top:8px}summary{cursor:pointer;color:var(--acc);font-size:13px}
+.vd{margin:8px 0;padding:8px 10px;background:#12151b;border-radius:8px}.vd h4{margin:0 0 4px;font-size:13px}.vd p{margin:0;font-size:13px;color:#c3cad6;white-space:pre-wrap}.vd.fail h4{color:var(--bad)}.vd.skip h4{color:var(--mut)}
+code{background:#252a35;padding:1px 5px;border-radius:4px;font-size:12px}.meta{font-size:12px;color:var(--mut)}
+pre{white-space:pre-wrap;font-size:12px;color:#aab3c2;max-height:340px;overflow:auto}.mut{color:var(--mut)}
+footer{margin-top:24px;font-size:12px;color:var(--mut)}
+</style><div class="wrap">
+<h1>Pa300 · GPT 逐首编配</h1><div class="sub">GPT 6.1 sol 每首读歌 → A 精选 / D 特色 / 按歌加海外曲风 → 全门禁 → 默认 V1 + 力度层 + 原厂调音层（夜曲 A5）</div>
+<div class="status">⏸ 额度到线暂停 · 17:08 重置后自动续</div>
+<div class="top">
+ <div class="panel"><div class="ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="trk"/>
+<circle cx="50" cy="50" r="42" stroke="var(--bad)" class="val" stroke-dasharray="263.9 263.9"/>
+<circle cx="10.1" cy="63.0" r="3.5" class="stopdot"/></svg>
+<div class="rv"><b>100%</b><span>5 小时</span></div><div class="rs">到 70% 停 · 17:08 重置</div></div></div>
+ <div class="panel"><div class="ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="trk"/>
+<circle cx="50" cy="50" r="42" stroke="var(--ok)" class="val" stroke-dasharray="176.8 263.9"/>
+<circle cx="25.3" cy="16.0" r="3.5" class="stopdot"/></svg>
+<div class="rv"><b>67%</b><span>本周</span></div><div class="rs">到 90% 整体停 · 11-12 重置</div></div></div>
+ <div class="panel wide"><div class="big">0<small> / 33 首做完</small></div>
+  <div class="bar"><i style="width:0%"></i></div>
+  <div class="kv"><span>精选 A <b>0</b></span><span>特色 D <b>0</b></span><span>海外 X <b>0</b></span><span>网格待修 <b>7</b></span></div>
+  <div class="kv" style="margin-top:6px"><span>每首用时 <b>—</b></span><span>每首 5h <b>—</b></span><span>每首 7d <b>—</b></span></div>
+  <div class="kv" style="margin-top:6px"><span>第一首做完后按实测估算</span></div></div>
+</div>
+<div class="panel" style="margin-top:12px"><b>40 首全景</b>
+<div class="mapg"><div class="cell todo" title="海阔天空">1</div><div class="cell todo" title="光辉岁月">2</div><div class="cell todo" title="真的爱你">3</div><div class="cell todo" title="喜欢你">4</div><div class="cell gridfix" title="不再犹豫">5</div><div class="cell todo" title="江南">6</div><div class="cell todo" title="一千年以后">7</div><div class="cell todo" title="小酒窝">8</div><div class="cell todo" title="修炼爱情">9</div><div class="cell todo" title="曹操">10</div><div class="cell gridfix" title="晴天">11</div><div class="cell todo" title="稻香">12</div><div class="cell todo" title="七里香">13</div><div class="cell todo" title="告白气球">14</div><div class="cell gridfix" title="青花瓷">15</div><div class="cell todo" title="月亮代表我的心">16</div><div class="cell todo" title="甜蜜蜜">17</div><div class="cell todo" title="吻别">18</div><div class="cell todo" title="千千阙歌">19</div><div class="cell todo" title="红豆">20</div><div class="cell todo" title="朋友">21</div><div class="cell todo" title="童话">22</div><div class="cell todo" title="后来">23</div><div class="cell todo" title="十年">24</div><div class="cell todo" title="听海">25</div><div class="cell todo" title="遇见">26</div><div class="cell todo" title="突然好想你">27</div><div class="cell todo" title="倔强">28</div><div class="cell todo" title="情非得已">29</div><div class="cell todo" title="隐形的翅膀">30</div><div class="cell todo" title="那些年">31</div><div class="cell todo" title="小幸运">32</div><div class="cell gridfix" title="演员">33</div><div class="cell todo" title="泡沫">34</div><div class="cell todo" title="平凡之路">35</div><div class="cell todo" title="成都">36</div><div class="cell gridfix" title="夜空中最亮的星">37</div><div class="cell todo" title="老男孩">38</div><div class="cell gridfix" title="小苹果">39</div><div class="cell gridfix" title="最炫民族风">40</div></div>
+<div class="legend"><span><i style="background:var(--ok)"></i>做完 0</span><span><i style="background:var(--run)"></i>在做 0</span><span><i style="background:var(--warn)"></i>做了一部分 0</span><span><i style="background:var(--bad)"></i>没过 0</span><span><i style="background:#252a35"></i>排队 33</span><span><i style="background:#3a3f4b"></i>网格待修 7</span></div></div>
+<div class="tools"><input id="q" placeholder="搜歌名 / 歌手 / 拼音"><button data-f="all" class="on">全部</button><button data-f="done">做完</button><button data-f="run">在做</button><button data-f="fail">没过</button><button data-f="todo">排队</button><button data-f="gridfix">待修</button></div>
+<div class="cards" id="cards"><article class="card todo" data-k="海阔天空beyondhaikuotiankong" data-s="todo">
+<header><span class="no">01</span><div class="tt"><b>海阔天空</b><small>Beyond</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="光辉岁月beyondguanghuisuiyue" data-s="todo">
+<header><span class="no">02</span><div class="tt"><b>光辉岁月</b><small>Beyond</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="真的爱你beyondzhendeaini" data-s="todo">
+<header><span class="no">03</span><div class="tt"><b>真的爱你</b><small>Beyond</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="喜欢你beyondxihuanni" data-s="todo">
+<header><span class="no">04</span><div class="tt"><b>喜欢你</b><small>Beyond</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card gridfix" data-k="不再犹豫beyondbuzaiyouyu" data-s="gridfix">
+<header><span class="no">05</span><div class="tt"><b>不再犹豫</b><small>Beyond</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><div class="vd skip"><p>扒谱网格偏移/错半小节，需人工修网格后再做（福总点名再修）。</p></div></details></article><article class="card todo" data-k="江南林俊杰jiangnan" data-s="todo">
+<header><span class="no">06</span><div class="tt"><b>江南</b><small>林俊杰</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="一千年以后林俊杰yiqiannianyihou" data-s="todo">
+<header><span class="no">07</span><div class="tt"><b>一千年以后</b><small>林俊杰</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="小酒窝林俊杰xiaojiuwo" data-s="todo">
+<header><span class="no">08</span><div class="tt"><b>小酒窝</b><small>林俊杰</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="修炼爱情林俊杰xiulianaiqing" data-s="todo">
+<header><span class="no">09</span><div class="tt"><b>修炼爱情</b><small>林俊杰</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="曹操林俊杰caocao" data-s="todo">
+<header><span class="no">10</span><div class="tt"><b>曹操</b><small>林俊杰</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card gridfix" data-k="晴天周杰伦qingtian" data-s="gridfix">
+<header><span class="no">11</span><div class="tt"><b>晴天</b><small>周杰伦</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><div class="vd skip"><p>扒谱网格偏移/错半小节，需人工修网格后再做（福总点名再修）。</p></div></details></article><article class="card todo" data-k="稻香周杰伦daoxiang" data-s="todo">
+<header><span class="no">12</span><div class="tt"><b>稻香</b><small>周杰伦</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="七里香周杰伦qilixiang" data-s="todo">
+<header><span class="no">13</span><div class="tt"><b>七里香</b><small>周杰伦</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="告白气球周杰伦gaobaiqiqiu" data-s="todo">
+<header><span class="no">14</span><div class="tt"><b>告白气球</b><small>周杰伦</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card gridfix" data-k="青花瓷周杰伦qinghuaci" data-s="gridfix">
+<header><span class="no">15</span><div class="tt"><b>青花瓷</b><small>周杰伦</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><div class="vd skip"><p>扒谱网格偏移/错半小节，需人工修网格后再做（福总点名再修）。</p></div></details></article><article class="card todo" data-k="月亮代表我的心邓丽君yueliang" data-s="todo">
+<header><span class="no">16</span><div class="tt"><b>月亮代表我的心</b><small>邓丽君</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="甜蜜蜜邓丽君tianmimi" data-s="todo">
+<header><span class="no">17</span><div class="tt"><b>甜蜜蜜</b><small>邓丽君</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="吻别张学友wenbie" data-s="todo">
+<header><span class="no">18</span><div class="tt"><b>吻别</b><small>张学友</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="千千阙歌陈慧娴qianqianquege" data-s="todo">
+<header><span class="no">19</span><div class="tt"><b>千千阙歌</b><small>陈慧娴</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="红豆王菲hongdou" data-s="todo">
+<header><span class="no">20</span><div class="tt"><b>红豆</b><small>王菲</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="朋友周华健pengyou" data-s="todo">
+<header><span class="no">21</span><div class="tt"><b>朋友</b><small>周华健</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="童话光良tonghua" data-s="todo">
+<header><span class="no">22</span><div class="tt"><b>童话</b><small>光良</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="后来刘若英houlai" data-s="todo">
+<header><span class="no">23</span><div class="tt"><b>后来</b><small>刘若英</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="十年陈奕迅shinian" data-s="todo">
+<header><span class="no">24</span><div class="tt"><b>十年</b><small>陈奕迅</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="听海张惠妹tinghai" data-s="todo">
+<header><span class="no">25</span><div class="tt"><b>听海</b><small>张惠妹</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="遇见孙燕姿yujian" data-s="todo">
+<header><span class="no">26</span><div class="tt"><b>遇见</b><small>孙燕姿</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="突然好想你五月天turanhaoxiangni" data-s="todo">
+<header><span class="no">27</span><div class="tt"><b>突然好想你</b><small>五月天</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="倔强五月天juejiang" data-s="todo">
+<header><span class="no">28</span><div class="tt"><b>倔强</b><small>五月天</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="情非得已庾澄庆qingfeideyi" data-s="todo">
+<header><span class="no">29</span><div class="tt"><b>情非得已</b><small>庾澄庆</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="隐形的翅膀张韶涵yinxingdechibang" data-s="todo">
+<header><span class="no">30</span><div class="tt"><b>隐形的翅膀</b><small>张韶涵</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="那些年胡夏naxienian" data-s="todo">
+<header><span class="no">31</span><div class="tt"><b>那些年</b><small>胡夏</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="小幸运田馥甄xiaoxingyun" data-s="todo">
+<header><span class="no">32</span><div class="tt"><b>小幸运</b><small>田馥甄</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card gridfix" data-k="演员薛之谦yanyuan" data-s="gridfix">
+<header><span class="no">33</span><div class="tt"><b>演员</b><small>薛之谦</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><div class="vd skip"><p>扒谱网格偏移/错半小节，需人工修网格后再做（福总点名再修）。</p></div></details></article><article class="card todo" data-k="泡沫邓紫棋paomo" data-s="todo">
+<header><span class="no">34</span><div class="tt"><b>泡沫</b><small>邓紫棋</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="平凡之路朴树pingfanzhilu" data-s="todo">
+<header><span class="no">35</span><div class="tt"><b>平凡之路</b><small>朴树</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card todo" data-k="成都赵雷chengdu" data-s="todo">
+<header><span class="no">36</span><div class="tt"><b>成都</b><small>赵雷</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card gridfix" data-k="夜空中最亮的星逃跑计划yekongzuiliang" data-s="gridfix">
+<header><span class="no">37</span><div class="tt"><b>夜空中最亮的星</b><small>逃跑计划</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><div class="vd skip"><p>扒谱网格偏移/错半小节，需人工修网格后再做（福总点名再修）。</p></div></details></article><article class="card todo" data-k="老男孩筷子兄弟laonanhai" data-s="todo">
+<header><span class="no">38</span><div class="tt"><b>老男孩</b><small>筷子兄弟</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><p class='mut'>还没开始</p></details></article><article class="card gridfix" data-k="小苹果筷子兄弟xiaopingguo" data-s="gridfix">
+<header><span class="no">39</span><div class="tt"><b>小苹果</b><small>筷子兄弟</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><div class="vd skip"><p>扒谱网格偏移/错半小节，需人工修网格后再做（福总点名再修）。</p></div></details></article><article class="card gridfix" data-k="最炫民族风凤凰传奇zuixuanminzufeng" data-s="gridfix">
+<header><span class="no">40</span><div class="tt"><b>最炫民族风</b><small>凤凰传奇</small></div><span class="dot"></span></header>
+<div class="chips"><span class="chip todo" title="">A精选 ·</span><span class="chip todo" title="">D特色 ·</span><span class="chip todo" title="">X海外 ·</span></div>
+<details class="more"><summary>详情</summary><div class="vd skip"><p>扒谱网格偏移/错半小节，需人工修网格后再做（福总点名再修）。</p></div></details></article></div>
+<footer>更新于 2026-11-06 16:39 · 额度来源 usage · 试听是电脑 GM 音色，不是琴声 · 成品在工程 songs/&lt;歌&gt;/outG*/final/，全部完成后统一收进 ~/Downloads/PA300_GPT批次_日期/</footer>
+</div><script>
+let F='all';const q=document.getElementById('q');
+function ap(){const v=q.value.toLowerCase();for(const c of document.querySelectorAll('.card'))c.style.display=(c.dataset.k.includes(v)&&(F==='all'||c.dataset.s===F||(F==='done'&&c.dataset.s==='part')))?'':'none'}
+q.oninput=ap;for(const b of document.querySelectorAll('.tools button'))b.onclick=()=>{F=b.dataset.f;document.querySelectorAll('.tools button').forEach(x=>x.classList.toggle('on',x===b));ap()};
+</script></html>
