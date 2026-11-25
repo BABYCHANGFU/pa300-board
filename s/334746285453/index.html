@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta name="robots" content="noindex,nofollow">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>T3 Code 全解析：3 设备配额、中文界面、自建架构与高阶玩法</title>
+  <style>
+    :root,
+    :root[data-theme="dark"] {
+      --background: #0d0f12;
+      --foreground: #f1f5f9;
+      --card: #15181e;
+      --card-foreground: #f1f5f9;
+      --secondary: #1d222b;
+      --secondary-foreground: #e2e8f0;
+      --muted: #191d24;
+      --muted-foreground: #94a3b8;
+      --accent: #232936;
+      --border: #2a313d;
+      --ring: #60a5fa;
+      --primary: #2563eb;
+      --primary-foreground: #ffffff;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --warning-surface: rgba(245, 158, 11, 0.13);
+      --destructive: #ef4444;
+      --destructive-surface: rgba(239, 68, 68, 0.14);
+      --info: #38bdf8;
+      --chart-1: #60a5fa;
+      --code-background: #0f1217;
+      --radius: 10px;
+      --font-sans: system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --background: #f8fafc;
+        --foreground: #0f172a;
+        --card: #ffffff;
+        --card-foreground: #0f172a;
+        --secondary: #f1f5f9;
+        --secondary-foreground: #1e293b;
+        --muted: #eef2f6;
+        --muted-foreground: #64748b;
+        --accent: #e2e8f0;
+        --border: #dbe2ea;
+        --ring: #2563eb;
+        --primary: #2563eb;
+        --primary-foreground: #ffffff;
+        --success: #16a34a;
+        --warning: #d97706;
+        --warning-surface: rgba(217, 119, 6, 0.11);
+        --destructive: #dc2626;
+        --destructive-surface: rgba(220, 38, 38, 0.11);
+        --info: #0284c7;
+        --chart-1: #2563eb;
+        --code-background: #f1f5f9;
+      }
+    }
+
+    :root[data-theme="light"] {
+      --background: #f8fafc;
+      --foreground: #0f172a;
+      --card: #ffffff;
+      --card-foreground: #0f172a;
+      --secondary: #f1f5f9;
+      --secondary-foreground: #1e293b;
+      --muted: #eef2f6;
+      --muted-foreground: #64748b;
+      --accent: #e2e8f0;
+      --border: #dbe2ea;
+      --ring: #2563eb;
+      --primary: #2563eb;
+      --primary-foreground: #ffffff;
+      --success: #16a34a;
+      --warning: #d97706;
+      --warning-surface: rgba(217, 119, 6, 0.11);
+      --destructive: #dc2626;
+      --destructive-surface: rgba(220, 38, 38, 0.11);
+      --info: #0284c7;
+      --chart-1: #2563eb;
+      --code-background: #f1f5f9;
+    }
+
+    .header-actions {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .theme-toggle {
+      appearance: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: inherit;
+      background: var(--secondary);
+      color: var(--secondary-foreground);
+      border: 1px solid var(--border);
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--ring);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: var(--background);
+      font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+      color: var(--foreground);
+      line-height: 1.55;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .guide-root {
+      width: 100%;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 14px 12px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Header strip - transparent outer wrapper, no card or banner box */
+    .guide-intro {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .guide-heading {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--foreground);
+    }
+
+    .guide-sub {
+      margin: 2px 0 0;
+      font-size: 12.5px;
+      color: var(--muted-foreground);
+    }
+
+    .ver-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-family: var(--font-mono, monospace);
+      background: var(--secondary);
+      color: var(--secondary-foreground);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .ver-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--success);
+      flex-shrink: 0;
+    }
+
+    /* Top 4 TL;DR Cards */
+    .tldr-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .tldr-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 380px) {
+      .tldr-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tldr-card {
+      appearance: none;
+      text-align: left;
+      width: 100%;
+      cursor: pointer;
+      background: var(--card);
+      color: var(--card-foreground);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+      font-family: inherit;
+    }
+
+    .tldr-card:hover {
+      border-color: var(--ring);
+      background: color-mix(in srgb, var(--card) 85%, var(--accent));
+    }
+
+    .tldr-card.is-active {
+      border-color: var(--primary);
+      background: color-mix(in srgb, var(--primary) 8%, var(--card));
+    }
+
+    .tldr-q {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--muted-foreground);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+
+    .tldr-a {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--foreground);
+      line-height: 1.35;
+    }
+
+    .tldr-note {
+      font-size: 11.5px;
+      color: var(--muted-foreground);
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
+    /* Tab Bar */
+    .tab-bar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      padding: 4px;
+      border-radius: var(--radius);
+      background: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    @media (max-width: 560px) {
+      .tab-bar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .tab-btn {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: calc(var(--radius) - 2px);
+      background: transparent;
+      color: var(--muted-foreground);
+      padding: 8px 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tab-btn:hover {
+      color: var(--foreground);
+      background: color-mix(in srgb, var(--card) 55%, transparent);
+    }
+
+    .tab-btn[aria-selected="true"] {
+      background: var(--primary);
+      color: var(--primary-foreground);
+      border-color: var(--primary);
+    }
+
+    /* Tab Panels */
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tab-panel.is-active {
+      display: flex;
+    }
+
+    /* Card Box */
+    .box {
+      background: var(--card);
+      color: var(--card-foreground);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .box-tint-success {
+      background: color-mix(in srgb, var(--success) 10%, var(--card));
+      border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+    }
+
+    .box-tint-warning {
+      background: var(--warning-surface, color-mix(in srgb, var(--warning) 12%, var(--card)));
+      border-color: color-mix(in srgb, var(--warning) 42%, var(--border));
+    }
+
+    .box-tint-info {
+      background: color-mix(in srgb, var(--info) 10%, var(--card));
+      border-color: color-mix(in srgb, var(--info) 40%, var(--border));
+    }
+
+    .box-title {
+      margin: 0 0 8px;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--foreground);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .box-desc {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted-foreground);
+      overflow-wrap: anywhere;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 560px) {
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .badge-success {
+      background: color-mix(in srgb, var(--success) 15%, transparent);
+      color: var(--success);
+      border-color: color-mix(in srgb, var(--success) 35%, transparent);
+    }
+
+    .badge-warning {
+      background: var(--warning-surface, color-mix(in srgb, var(--warning) 15%, transparent));
+      color: var(--warning);
+      border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+    }
+
+    .badge-destructive {
+      background: var(--destructive-surface, color-mix(in srgb, var(--destructive) 15%, transparent));
+      color: var(--destructive);
+      border-color: color-mix(in srgb, var(--destructive) 35%, transparent);
+    }
+
+    .badge-info {
+      background: color-mix(in srgb, var(--info) 15%, transparent);
+      color: var(--info);
+      border-color: color-mix(in srgb, var(--info) 35%, transparent);
+    }
+
+    .badge-primary {
+      background: color-mix(in srgb, var(--primary) 14%, transparent);
+      color: var(--primary);
+      border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+    }
+
+    /* Inline code & pre */
+    code {
+      font-family: var(--font-mono, ui-monospace, monospace);
+      font-size: 12px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--code-background);
+      color: var(--foreground);
+      border: 1px solid var(--border);
+      overflow-wrap: anywhere;
+    }
+
+    .cmd-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: calc(var(--radius) - 2px);
+      background: var(--code-background);
+      border: 1px solid var(--border);
+      max-width: 100%;
+    }
+
+    .cmd-text {
+      font-family: var(--font-mono, ui-monospace, monospace);
+      font-size: 12px;
+      color: var(--foreground);
+      white-space: pre;
+      overflow-x: auto;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .copy-btn {
+      appearance: none;
+      flex-shrink: 0;
+      cursor: pointer;
+      padding: 3px 9px;
+      border-radius: calc(var(--radius) - 3px);
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: inherit;
+      background: var(--secondary);
+      color: var(--secondary-foreground);
+      border: 1px solid var(--border);
+    }
+
+    .copy-btn:hover {
+      border-color: var(--ring);
+    }
+
+    /* Tab 1: Quota Simulator */
+    .sim-controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 10px 0 12px;
+    }
+
+    @media (max-width: 560px) {
+      .sim-controls {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stepper-card {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) - 2px);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .stepper-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--foreground);
+    }
+
+    .stepper-sub {
+      font-size: 11px;
+      color: var(--muted-foreground);
+    }
+
+    .stepper-btns {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .step-btn {
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--foreground);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .step-btn:hover {
+      border-color: var(--ring);
+    }
+
+    .step-val {
+      min-width: 24px;
+      text-align: center;
+      font-family: var(--font-mono, monospace);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--foreground);
+    }
+
+    .quota-bar-wrap {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--muted);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .quota-bar-fill {
+      height: 10px;
+      border-radius: 999px;
+      transition: width 0.2s ease, background-color 0.2s ease;
+    }
+
+    .sim-verdict {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--foreground);
+    }
+
+    /* Tables */
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted-foreground);
+      font-weight: 600;
+      font-size: 11.5px;
+      white-space: nowrap;
+    }
+
+    td:nth-child(2),
+    td:nth-child(3),
+    td:nth-child(4) {
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    @media (max-width: 560px) {
+      .tier-table thead {
+        display: none;
+      }
+      .tier-table,
+      .tier-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .tier-table tr {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 4px 8px;
+        padding: 10px 12px;
+        background: var(--secondary);
+        border: 1px solid var(--border);
+        border-radius: calc(var(--radius) - 2px);
+      }
+      .tier-table td {
+        padding: 0;
+        border: none;
+        white-space: normal;
+      }
+      .tier-table td:nth-child(1) {
+        grid-column: 1;
+        font-size: 13px;
+      }
+      .tier-table td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+      }
+      .tier-table td:nth-child(2) {
+        grid-column: 1 / -1;
+        font-size: 12px;
+        color: var(--foreground);
+      }
+      .tier-table td:nth-child(2)::before {
+        content: "主机上限：";
+        color: var(--muted-foreground);
+      }
+      .tier-table td:nth-child(3) {
+        grid-column: 1 / -1;
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .tier-table td:nth-child(3)::before {
+        content: "手机 / 浏览器端：";
+      }
+      .tier-table td:nth-child(5) {
+        grid-column: 1 / -1;
+        font-size: 12px;
+        color: var(--muted-foreground);
+        padding-top: 4px;
+        border-top: 1px solid var(--border);
+        margin-top: 2px;
+      }
+    }
+
+    /* Tab 2: Steps & Language Chips */
+    .step-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 560px) {
+      .step-list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .step-item {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) - 2px);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .step-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      font-family: var(--font-mono, monospace);
+    }
+
+    .step-heading {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--foreground);
+    }
+
+    .step-body {
+      font-size: 12px;
+      color: var(--muted-foreground);
+    }
+
+    .chip-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .lang-chip {
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      background: var(--secondary);
+      color: var(--secondary-foreground);
+      border: 1px solid var(--border);
+    }
+
+    .lang-chip.is-zh {
+      background: color-mix(in srgb, var(--success) 16%, transparent);
+      color: var(--success);
+      border-color: color-mix(in srgb, var(--success) 40%, transparent);
+      font-weight: 700;
+    }
+
+    .bullet-list {
+      margin: 6px 0 0;
+      padding-left: 16px;
+      font-size: 12.5px;
+      color: var(--muted-foreground);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .bullet-list strong {
+      color: var(--foreground);
+    }
+
+    /* Tab 3: SVG Diagram + Route Switcher */
+    .arch-lanes {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 560px) {
+      .arch-lanes {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .arch-svg {
+      width: 100%;
+      height: 156px;
+      display: block;
+    }
+
+    .arch-truth {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: calc(var(--radius) - 2px);
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--foreground);
+      text-align: center;
+    }
+
+    .route-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .route-pill {
+      appearance: none;
+      cursor: pointer;
+      padding: 7px 12px;
+      border-radius: calc(var(--radius) - 2px);
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: inherit;
+      background: var(--secondary);
+      color: var(--secondary-foreground);
+      border: 1px solid var(--border);
+    }
+
+    .route-pill[aria-pressed="true"] {
+      background: var(--primary);
+      color: var(--primary-foreground);
+      border-color: var(--primary);
+    }
+
+    .route-detail {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .route-detail.is-active {
+      display: flex;
+    }
+
+    /* Tab 4: Feature Grid */
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 560px) {
+      .portal-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 560px) {
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .feat-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--foreground);
+    }
+
+    .feat-desc {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted-foreground);
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <div class="guide-root">
+    <!-- Top Header Strip -->
+    <div class="guide-intro">
+      <div>
+        <h1 class="guide-heading">T3 Code 核心疑问全解析</h1>
+        <p class="guide-sub">基于官方源码架构 &amp; 本机 <code>v0.1.12</code> 实测，点击卡片或标签切换查看</p>
+      </div>
+      <div class="header-actions">
+        <span class="ver-pill"><span class="ver-dot"></span>本机实测 v0.1.12 · MIT 开源</span>
+        <button type="button" class="theme-toggle" id="theme-toggle">🌓 切换明暗</button>
+      </div>
+    </div>
+
+    <!-- Top 4 TL;DR Quick-Answer Cards -->
+    <div class="tldr-grid">
+      <button type="button" class="tldr-card is-active" data-jump="tab-pricing">
+        <div class="tldr-q"><span>① 3 台设备收费？</span><span>→</span></div>
+        <div class="tldr-a">软件永久免费，限官方云穿透主机数</div>
+        <div class="tldr-note">手机/网页端无限免费；走 Tailscale 或自有 VPS 也无上限。</div>
+      </button>
+      <button type="button" class="tldr-card" data-jump="tab-chinese">
+        <div class="tldr-q"><span>② 能改中文界面？</span><span>→</span></div>
+        <div class="tldr-a">v0.1.12 已官方内置简体中文</div>
+        <div class="tldr-note">无需汉化补丁，打开 Settings → General → Language 秒切。</div>
+      </button>
+      <button type="button" class="tldr-card" data-jump="tab-selfhost">
+        <div class="tldr-q"><span>③ 自建与谷歌账号？</span><span>→</span></div>
+        <div class="tldr-a">自连 / Tailscale / VPS 完全免登谷歌</div>
+        <div class="tldr-note">官方 T3 Connect 不是 VPN；想真内网组网直接用 Tailscale。</div>
+      </button>
+      <button type="button" class="tldr-card" data-jump="tab-play">
+        <div class="tldr-q"><span>④ 官网能怎么玩？</span><span>→</span></div>
+        <div class="tldr-a">中文官网 + 网页控制台 + 8 大隐藏玩法</div>
+        <div class="tldr-note">跨机派活、手机原生开 localhost、双 Shift 截屏、AI 换肤。</div>
+      </button>
+    </div>
+
+    <!-- Interactive 4-Tab Bar -->
+    <div class="tab-bar" role="tablist" aria-label="T3 Code 疑问分类">
+      <button type="button" class="tab-btn" role="tab" id="btn-pricing" aria-selected="true" aria-controls="tab-pricing" data-tab="tab-pricing">
+        💰 收费与 3 设备真相
+      </button>
+      <button type="button" class="tab-btn" role="tab" id="btn-chinese" aria-selected="false" aria-controls="tab-chinese" data-tab="tab-chinese">
+        🇨🇳 秒切官方中文界面
+      </button>
+      <button type="button" class="tab-btn" role="tab" id="btn-selfhost" aria-selected="false" aria-controls="tab-selfhost" data-tab="tab-selfhost">
+        🌐 谷歌账号与自建架构
+      </button>
+      <button type="button" class="tab-btn" role="tab" id="btn-play" aria-selected="false" aria-controls="tab-play" data-tab="tab-play">
+        🚀 官网与 8 大隐藏玩法
+      </button>
+    </div>
+
+    <!-- TAB 1: Pricing & 3-Device Quota -->
+    <section id="tab-pricing" class="tab-panel is-active" role="tabpanel" aria-labelledby="btn-pricing">
+      <div class="box box-tint-success">
+        <div class="box-title">
+          <span>一句话定心丸：软件本身 0 元 MIT 开源，不卖 Token 也不收端费</span>
+          <span class="badge badge-success">不限手机/浏览器数量</span>
+        </div>
+        <p class="box-desc">
+          网上传的「3 设备收费」其实是把 <strong>T3 Connect 官方云穿透的免费主机配额（3 台电脑/VPS）</strong> 误传成客户端限制了。
+          手机 App、网页端 <code>app.t3.codes</code> 和另一台只做遥控的电脑都<strong>不占用 3 台名额</strong>；走 Tailscale 或自有 VPS 直连更是一台不限制。
+        </p>
+      </div>
+
+      <!-- Interactive Quota Simulator -->
+      <div class="box">
+        <div class="box-title">
+          <span>配额计算器：试算你的设备组合要不要花钱</span>
+          <span id="sim-badge" class="badge badge-success">免费白嫖够用</span>
+        </div>
+        <div class="sim-controls">
+          <div class="stepper-card">
+            <div>
+              <div class="stepper-label">干活的主机数</div>
+              <div class="stepper-sub">跑 <code>t3 serve</code> 的 Mac / 台式机 / VPS</div>
+            </div>
+            <div class="stepper-btns">
+              <button type="button" class="step-btn" id="host-minus" aria-label="减少主机">−</button>
+              <span class="step-val" id="host-count">1</span>
+              <button type="button" class="step-btn" id="host-plus" aria-label="增加主机">+</button>
+            </div>
+          </div>
+          <div class="stepper-card">
+            <div>
+              <div class="stepper-label">遥控客户端数</div>
+              <div class="stepper-sub">一加 15 / iPad / 浏览器 / 远程桌面端</div>
+            </div>
+            <div class="stepper-btns">
+              <button type="button" class="step-btn" id="client-minus" aria-label="减少客户端">−</button>
+              <span class="step-val" id="client-count">3</span>
+              <button type="button" class="step-btn" id="client-plus" aria-label="增加客户端">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quota-bar-wrap" aria-hidden="true">
+          <div id="sim-bar" class="quota-bar-fill" style="width: 33.3%; background: var(--success);"></div>
+        </div>
+        <div class="sim-verdict">
+          <span id="sim-summary">当前占用官方云穿透 <strong>1 / 3 台主机</strong> · <strong>3 台遥控端全部免费不计入</strong></span>
+          <span id="sim-advice" style="color: var(--muted-foreground);">免费版已完全够用</span>
+        </div>
+      </div>
+
+      <!-- Tier Table -->
+      <div class="box">
+        <div class="box-title">
+          <span>各连接方案配额与费用对照（均需自带 Claude / Codex / Antigravity 订阅）</span>
+        </div>
+        <div class="table-scroll">
+          <table class="tier-table">
+            <thead>
+              <tr>
+                <th>方案</th>
+                <th>可挂主机数</th>
+                <th>手机 / 浏览器端</th>
+                <th>官方费用</th>
+                <th>适用说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>T3 Connect 免费版</strong></td>
+                <td>最多 <strong>3 台</strong></td>
+                <td>不限</td>
+                <td><span class="badge badge-success">$0</span></td>
+                <td>官方明确说目前不想收费；1 台主力 Mac + 2 台备用机绰绰有余。</td>
+              </tr>
+              <tr>
+                <td><strong>绑定 T3 Chat Pro</strong></td>
+                <td>升至 <strong>10 台</strong></td>
+                <td>不限</td>
+                <td><span class="badge badge-info">$8 / 月</span></td>
+                <td>靠 T3 Chat 会员扩额；退订后已挂机器不断，只是暂不能新增第 4 台。</td>
+              </tr>
+              <tr>
+                <td><strong>绑定 T3 Chat Premier</strong></td>
+                <td>升至 <strong>100 台</strong></td>
+                <td>不限</td>
+                <td><span class="badge badge-warning">$50 / 月</span></td>
+                <td>多台云机/工作站集群重度玩家。</td>
+              </tr>
+              <tr>
+                <td><strong>LAN / Tailscale / SSH / 自有 VPS</strong></td>
+                <td><strong>无上限</strong></td>
+                <td>不限</td>
+                <td><span class="badge badge-success">$0</span></td>
+                <td>完全绕开 T3 Connect 账号与名额限制，官方 FAQ 亲自推荐的白嫖退路。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Chinese UI -->
+    <section id="tab-chinese" class="tab-panel" role="tabpanel" aria-labelledby="btn-chinese">
+      <div class="box box-tint-success">
+        <div class="box-title">
+          <span>不用找第三方汉化！你电脑上的 v0.1.12 已经自带官方中文语言包</span>
+          <span class="badge badge-success">本机已验证 zh-DGV95Kmw.js (702 KB)</span>
+        </div>
+        <p class="box-desc">
+          早期版本（Issue #1463 时期）确实只有英文，但官方现已使用 <code>gt-react</code> / <code>gt-react-native</code> 接入 10 国语言，并把完整简体中文包编译进安装包里了。
+        </p>
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-num">STEP 01</span>
+            <span class="step-heading">打开 Settings 设置</span>
+            <span class="step-body">在 Mac 桌面端或网页端左下角齿轮 / 菜单进入设置面板。</span>
+          </div>
+          <div class="step-item">
+            <span class="step-num">STEP 02</span>
+            <span class="step-heading">点进 General（常规）</span>
+            <span class="step-body">对应路径 <code>/settings/general</code>，或直接在设置搜索框搜 <code>中文</code> / <code>Language</code>。</span>
+          </div>
+          <div class="step-item">
+            <span class="step-num">STEP 03</span>
+            <span class="step-heading">Language 选「中文」</span>
+            <span class="step-body">选择后界面立即切换为简体中文，无需重启服务或重连线程。</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="box">
+          <div class="box-title"><span>📱 手机端（一加 15）说明</span></div>
+          <p class="box-desc">
+            官方源码 <code>apps/mobile</code> 也已经内置了 <strong>328 KB</strong> 简体中文翻译包（<code>zh.json</code>）。
+            如果你手机上前天装的 Play 商店 build 784 旧包里还没刷出 Language 选项，等商店推下一版更新就能和桌面端一样直接切换。
+          </p>
+          <div class="chip-wrap">
+            <span class="lang-chip is-zh">中文 (zh) · 已内置</span>
+            <span class="lang-chip">English</span>
+            <span class="lang-chip">日本語</span>
+            <span class="lang-chip">한국어</span>
+            <span class="lang-chip">Deutsch</span>
+            <span class="lang-chip">Español</span>
+            <span class="lang-chip">Français</span>
+            <span class="lang-chip">Português</span>
+            <span class="lang-chip">Русский</span>
+            <span class="lang-chip">Svenska</span>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="box-title"><span>👀 切完后哪些变中文、哪些仍留英文？</span></div>
+          <ul class="bullet-list">
+            <li><strong>会变中文：</strong>全部侧边栏菜单、设置项说明、弹窗按钮、快捷键提示、状态标签与相对时间。</li>
+            <li><strong>按官方规范故意保留英文：</strong>
+              产品和模型名（<code>T3 Code</code>、<code>Antigravity</code>、<code>Claude</code>、<code>Codex</code>）、模型 slug、终端命令、文件路径、URL，以及后台服务端直接吐出的原始日志/报错。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Google Account & Self-Host Architecture -->
+    <section id="tab-selfhost" class="tab-panel" role="tabpanel" aria-labelledby="btn-selfhost">
+      <div class="box">
+        <div class="box-title">
+          <span>架构一眼看穿：T3 Connect 不是 Tailscale，自建线路完全不用登谷歌账号</span>
+          <span class="badge badge-primary">代码直连模型，永不经 T3</span>
+        </div>
+        <p class="box-desc" style="margin-bottom: 10px;">
+          官方 <strong>T3 Connect</strong> 本质是「<strong>Clerk 身份认证（谷歌/GitHub 登录）+ Relay 撮合发门票 + Cloudflare Tunnel 隧道</strong>」，不是虚拟局域网 VPN。只有走官方云穿透才需要登 Clerk 账号；你走局域网、Tailscale 或自己 VPS，全靠本地生成一次性配对码交换加密凭证（DPoP）。
+        </p>
+
+        <!-- Responsive 2-Lane SVG Diagrams using theme variables only -->
+        <div class="arch-lanes">
+          <svg class="arch-svg" viewBox="0 0 326 154" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="官方 T3 Connect 架构">
+            <rect x="1" y="1" width="324" height="152" rx="10" fill="var(--secondary)" stroke="var(--border)" stroke-width="1.2" />
+            <text x="14" y="24" font-size="12" font-weight="700" fill="var(--foreground)">官方云穿透（T3 Connect）</text>
+            <text x="312" y="24" text-anchor="end" font-size="11" font-weight="600" fill="var(--chart-1)">限 3 台主机 · 有推送</text>
+
+            <rect x="12" y="42" width="84" height="46" rx="7" fill="var(--card)" stroke="var(--border)" />
+            <text x="54" y="62" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--foreground)">手机 / 网页</text>
+            <text x="54" y="78" text-anchor="middle" font-size="10" fill="var(--muted-foreground)">登谷歌(Clerk)</text>
+
+            <rect x="118" y="38" width="94" height="54" rx="7" fill="var(--card)" stroke="var(--chart-1)" stroke-width="1.3" />
+            <text x="165" y="57" text-anchor="middle" font-size="11" font-weight="700" fill="var(--foreground)">T3 Relay + CF</text>
+            <text x="165" y="72" text-anchor="middle" font-size="9.5" fill="var(--muted-foreground)">发一次性门票</text>
+            <text x="165" y="85" text-anchor="middle" font-size="9.5" fill="var(--muted-foreground)">灵动岛 / FCM推送</text>
+
+            <rect x="234" y="42" width="80" height="46" rx="7" fill="var(--card)" stroke="var(--border)" />
+            <text x="274" y="62" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--foreground)">你的主机</text>
+            <text x="274" y="78" text-anchor="middle" font-size="10" fill="var(--muted-foreground)">cloudflared</text>
+
+            <line x1="96" y1="65" x2="116" y2="65" stroke="var(--chart-1)" stroke-width="1.8" />
+            <polygon points="118,65 112,61 112,69" fill="var(--chart-1)" />
+            <line x1="212" y1="65" x2="232" y2="65" stroke="var(--chart-1)" stroke-width="1.8" />
+            <polygon points="234,65 228,61 228,69" fill="var(--chart-1)" />
+
+            <rect x="12" y="102" width="302" height="40" rx="7" fill="var(--card)" stroke="var(--border)" />
+            <text x="22" y="119" font-size="10.5" font-weight="600" fill="var(--foreground)">特点：零公网 IP / 路由器配置，出门直接连</text>
+            <text x="22" y="134" font-size="10" fill="var(--muted-foreground)">常规聊天走隧道直连，Relay 不存代码</text>
+          </svg>
+
+          <svg class="arch-svg" viewBox="0 0 326 154" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tailscale 与自有 VPS 自连架构">
+            <rect x="1" y="1" width="324" height="152" rx="10" fill="var(--secondary)" stroke="var(--border)" stroke-width="1.2" />
+            <text x="14" y="24" font-size="12" font-weight="700" fill="var(--foreground)">自连（Tailscale / 自有 VPS）</text>
+            <text x="312" y="24" text-anchor="end" font-size="11" font-weight="600" fill="var(--success)">免登谷歌 · 无上限</text>
+
+            <rect x="12" y="42" width="84" height="46" rx="7" fill="var(--card)" stroke="var(--border)" />
+            <text x="54" y="62" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--foreground)">手机 / 网页</text>
+            <text x="54" y="78" text-anchor="middle" font-size="10" fill="var(--success)">不用登录账号</text>
+
+            <rect x="118" y="38" width="94" height="54" rx="7" fill="var(--card)" stroke="var(--success)" stroke-width="1.3" />
+            <text x="165" y="57" text-anchor="middle" font-size="11" font-weight="700" fill="var(--foreground)">你自己的网络</text>
+            <text x="165" y="72" text-anchor="middle" font-size="9.5" fill="var(--muted-foreground)">Tailscale 内网</text>
+            <text x="165" y="85" text-anchor="middle" font-size="9.5" fill="var(--muted-foreground)">或 VPS Caddy</text>
+
+            <rect x="234" y="42" width="80" height="46" rx="7" fill="var(--card)" stroke="var(--border)" />
+            <text x="274" y="62" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--foreground)">Mac / VPS</text>
+            <text x="274" y="78" text-anchor="middle" font-size="10" fill="var(--muted-foreground)">t3 pair 扫码</text>
+
+            <line x1="96" y1="65" x2="116" y2="65" stroke="var(--success)" stroke-width="1.8" />
+            <polygon points="118,65 112,61 112,69" fill="var(--success)" />
+            <line x1="212" y1="65" x2="232" y2="65" stroke="var(--success)" stroke-width="1.8" />
+            <polygon points="234,65 228,61 228,69" fill="var(--success)" />
+
+            <rect x="12" y="102" width="302" height="40" rx="7" fill="var(--card)" stroke="var(--border)" />
+            <text x="22" y="119" font-size="10.5" font-weight="600" fill="var(--foreground)">配对方式：运行 t3 pair 扫码或粘 URL</text>
+            <text x="22" y="134" font-size="10" fill="var(--muted-foreground)">绑定 DPoP 公钥凭证，30 天不用才失效</text>
+          </svg>
+        </div>
+
+        <div class="arch-truth">
+          重要区分：AI 模型账号（如 Antigravity 的谷歌号 / Claude / Codex）永远只留在干活主机本地，与 T3 登录是两码事
+        </div>
+      </div>
+
+      <!-- 3 Self-Host Routes Switcher -->
+      <div class="box">
+        <div class="box-title">
+          <span>用自己的服务器 / 内网怎么搞？3 条路线切换对比</span>
+          <span class="badge badge-info">推荐选 A 或 B</span>
+        </div>
+        <div class="route-pills">
+          <button type="button" class="route-pill" aria-pressed="true" data-route="route-a">路线 A · Tailscale 组网（最推荐）</button>
+          <button type="button" class="route-pill" aria-pressed="false" data-route="route-b">路线 B · 自有 VPS 反代或托管</button>
+          <button type="button" class="route-pill" aria-pressed="false" data-route="route-c">路线 C · 自建官方 Relay（不推荐）</button>
+        </div>
+
+        <div id="route-a" class="route-detail is-active">
+          <p class="box-desc">
+            <strong>像 Tailscale 吗？这就是原版 Tailscale 本尊。</strong>Mac 和一加 15 装好 Tailscale 拉进同一个私有虚拟局域网后，T3 Code 会自动识别 Tailnet IP 和 MagicDNS HTTPS 域名（<code>https://机器名.tailnet.ts.net</code>），<strong>完全免登谷歌/Clerk 账号</strong>。作者 Theo 自己出门也经常切 Tailscale 做备用线路。
+          </p>
+          <ul class="bullet-list">
+            <li><strong>多路线自动热切换：</strong>把「家里 LAN → Tailscale → T3 Connect」都保存成同一台机器的多条 Route，在家秒走千兆内网，出门自动滑到 Tailscale，极端情况才走云穿透。</li>
+            <li><strong>开启方式：</strong>桌面端在 <code>Settings → Sharing &amp; access</code> 打开 <strong>Tailscale HTTPS</strong>；或直接跑终端命令生成扫码二维码。</li>
+          </ul>
+          <div class="cmd-row">
+            <span class="cmd-text">t3 serve --tailscale-serve &amp;&amp; t3 pair --tailscale</span>
+            <button type="button" class="copy-btn" data-copy="t3 serve --tailscale-serve && t3 pair --tailscale">复制</button>
+          </div>
+        </div>
+
+        <div id="route-b" class="route-detail">
+          <p class="box-desc">
+            <strong>福总你手头本来就有 VPS，这条路非常顺手，同样完全免登谷歌账号。</strong>注意 <code>app.t3.codes</code> 网页端和外网配对要求 <strong>HTTPS</strong>（可用 Caddy 一行反代自动签 Let's Encrypt 证书），客户端选「Add Environment」粘贴域名和 <code>t3 pair</code> 配对码即可。
+          </p>
+          <ul class="bullet-list">
+            <li><strong>用法 1（VPS 当反代网关）：</strong>VPS 通过 WireGuard / FRP / SSH 隧道反代家里 Mac 的 <code>127.0.0.1:3773</code>，公网域名直达家里电脑。</li>
+            <li><strong>用法 2（直接把干活环境搬上 VPS）：</strong>在 VPS 上跑 <code>t3 serve</code>（或桌面端直接 <code>Add Environment → SSH</code> 托管），彻底告别 MacBook 合盖断网；注意模型 CLI（Claude/Codex/Antigravity）需在该 VPS 上登录。</li>
+          </ul>
+          <div class="cmd-row">
+            <span class="cmd-text">t3 up --lan &amp;&amp; t3 pair --ttl 15m</span>
+            <button type="button" class="copy-btn" data-copy="t3 up --lan && t3 pair --ttl 15m">复制</button>
+          </div>
+        </div>
+
+        <div id="route-c" class="route-detail">
+          <p class="box-desc">
+            <strong>源码 <code>infra/relay</code> 确实开源，但个人自建属于「杀鸡用牛刀」。</strong>它不是一个轻量化 Docker，而是整套云原生控制面：
+          </p>
+          <ul class="bullet-list">
+            <li><strong>依赖重：</strong>必须自备 Cloudflare Workers + PlanetScale 数据库 + 自己申请一套 Clerk OAuth / JWT 模板。</li>
+            <li><strong>还要自己重编客户端：</strong>官方预编译桌面端/手机端把 Relay 域名写死在构建环境变量（<code>T3CODE_RELAY_URL</code>）里，自建 Relay 必须自己编译整套 App 和配 Apple APNs / Google FCM 推送证书。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="box box-tint-warning">
+        <div class="box-title"><span>⚡ 黄金混合姿势（兼顾隐私免费 + 通知体验）</span></div>
+        <p class="box-desc">
+          纯走 Tailscale / 自有 VPS 时，<strong>不会有</strong> iOS 灵动岛、Android FCM 锁屏推送和访客链接（这两项依赖官方 Relay 转发）。
+          <strong>最优解：</strong>你主力 Mac 本身就只有 1 台，继续留着免费的 T3 Connect 收手机进度通知，同时把 <strong>LAN + Tailscale 路线加进同一台机器并拖到最前面</strong>——日常流量全走你自己的加密内网，既有推送又不花一分钱！
+        </p>
+      </div>
+    </section>
+
+    <!-- TAB 4: Official Site & 8 Hidden Features -->
+    <section id="tab-play" class="tab-panel" role="tabpanel" aria-labelledby="btn-play">
+      <!-- Official Web Portals -->
+      <div class="portal-grid">
+        <div class="box">
+          <div class="box-title">
+            <span>🌏 官方中文主页 <code>t3.codes/zh</code></span>
+            <span class="badge badge-info">安装 / 文档入口</span>
+          </div>
+          <p class="box-desc">
+            官网页自带简体中文版（<code>/zh</code>），可下全平台安装包（Mac/Win/Linux/iOS/Android）或复制一键 CLI 安装脚本；本地无界面服务器跑 <code>curl -fsSL https://t3.codes/install.sh | sh</code> 即可。
+          </p>
+        </div>
+        <div class="box">
+          <div class="box-title">
+            <span>🖥️ 网页控制台 <code>app.t3.codes</code></span>
+            <span class="badge badge-success">支持 Prompt Links</span>
+          </div>
+          <p class="box-desc">
+            任何能上网的电脑免装客户端直连你的 HTTPS 主机；还支持拼装 <strong>Prompt Link</strong>（如 <code>app.t3.codes/new?prompt=...&amp;repo=...</code>），分享给别人只预填草稿不自动执行，安全分享修 Bug 模板。
+          </p>
+        </div>
+      </div>
+
+      <!-- 8 Hidden/Power Features -->
+      <div class="feature-grid">
+        <div class="feat-card">
+          <div class="feat-head"><span>1. 跨机互相派活（Linked Environments）</span><span class="badge badge-primary">Labs</span></div>
+          <p class="feat-desc">在 Mac 和 VPS 互连后，在 Mac 聊天框直接说「把这个任务交给我的 VPS」，Agent 自动跨机起线程跑完再回传结果，支持只读旁观。</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-head"><span>2. 多机自动负载均衡（Auto Balance）</span><span class="badge badge-info">≥2 台可用</span></div>
+          <p class="feat-desc">手头有 2 台以上主机时，在 <code>Settings → Environments</code> 设偏好权重，新开对话自动挑 CPU 和内存最空闲的机器跑。</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-head"><span>3. 共享浏览器 + 手机原生开 localhost</span><span class="badge badge-success">超好用</span></div>
+          <p class="feat-desc">电脑跑起前端服务后，手机能看流式画面并接管点击，长按 <code>localhost</code> 链接还能在手机原生浏览；桌面端支持一键导入 Chrome/Safari Cookie。</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-head"><span>4. 内置真机/模拟器直播（Device 面板）</span><span class="badge badge-info">移动端调试</span></div>
+          <p class="feat-desc">把 iOS 模拟器或 Android 模拟器直接嵌在对话右侧（还支持浮窗），边看 Agent 自动点 UI 测 App，边手动点几下。</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-head"><span>5. 24h 访客围观链接（Guest Links）</span><span class="badge badge-primary">Labs</span></div>
+          <p class="feat-desc">右键线程生成 24 小时一次性分享链接，同事免注册就能看进度和插话提问，每条提问必须经你点 <strong>Send</strong> 才会发给 Agent。</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-head"><span>6. 持久化工作流（Workflows）</span><span class="badge badge-primary">Labs</span></div>
+          <p class="feat-desc">在 <code>~/.t3/workflows/</code> 用 TypeScript 写多阶段流水线（排查→修复→人工审批→发布），支持定时任务、Webhook 触发和断电续跑。</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-head"><span>7. 双 Shift 秒截屏喂图（SnapShot）</span><span class="badge badge-success">效率神器</span></div>
+          <p class="feat-desc">连按两下 Shift 瞬间抓取任意应用窗口截图（可选附带窗口文字），直接塞进当前对话草稿里问 Agent。</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-head"><span>8. AI 对话换皮肤 + CPA 额度池面板</span><span class="badge badge-warning">极客必看</span></div>
+          <p class="feat-desc">支持导入 VS Code 主题 JSON 和自定义 CSS，甚至直接在对话里让 Agent 调 <code>t3_theme_set</code> 改配色；Usage 页原生支持对接 <strong>CLIProxyAPI</strong> 聚合看板。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+      const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
+      const tldrCards = Array.from(document.querySelectorAll('.tldr-card'));
+
+      function switchTab(targetId) {
+        tabButtons.forEach((btn) => {
+          const active = btn.dataset.tab === targetId;
+          btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        tabPanels.forEach((panel) => {
+          panel.classList.toggle('is-active', panel.id === targetId);
+        });
+        tldrCards.forEach((card) => {
+          card.classList.toggle('is-active', card.dataset.jump === targetId);
+        });
+      }
+
+      tabButtons.forEach((btn) => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+
+      tldrCards.forEach((card) => {
+        card.addEventListener('click', () => switchTab(card.dataset.jump));
+      });
+
+      // Tab 1 Quota Simulator
+      let hosts = 1;
+      let clients = 3;
+      const hostValEl = document.getElementById('host-count');
+      const clientValEl = document.getElementById('client-count');
+      const simBadge = document.getElementById('sim-badge');
+      const simBar = document.getElementById('sim-bar');
+      const simSummary = document.getElementById('sim-summary');
+      const simAdvice = document.getElementById('sim-advice');
+
+      function updateSimulator() {
+        hostValEl.textContent = String(hosts);
+        clientValEl.textContent = String(clients);
+        const pct = Math.min(100, Math.round((hosts / 3) * 100));
+        simBar.style.width = pct + '%';
+
+        simSummary.innerHTML =
+          '当前占用官方云穿透 <strong>' + hosts + ' / 3 台主机</strong> · <strong>' + clients + ' 台遥控端全部免费不计入</strong>';
+
+        if (hosts <= 3) {
+          simBadge.className = 'badge badge-success';
+          simBadge.textContent = '免费白嫖够用';
+          simBar.style.background = 'var(--success)';
+          simAdvice.textContent = '官方 T3 Connect 免费版直接搞定，0 元开销';
+        } else if (hosts <= 10) {
+          simBadge.className = 'badge badge-warning';
+          simBadge.textContent = '超出免费 3 台上限';
+          simBar.style.background = 'var(--warning)';
+          simAdvice.textContent = '可选绑 T3 Chat Pro ($8/月，升至 10 台) 或 3 台以外改走 Tailscale/VPS 0 元直连';
+        } else {
+          simBadge.className = 'badge badge-destructive';
+          simBadge.textContent = '重度多机规模';
+          simBar.style.background = 'var(--destructive)';
+          simAdvice.textContent = '官方需绑 Premier ($50/月，100 台)，更推荐直接用 Tailscale / 自有 VPS 无上限 $0';
+        }
+      }
+
+      document.getElementById('host-minus').addEventListener('click', () => {
+        if (hosts > 1) { hosts -= 1; updateSimulator(); }
+      });
+      document.getElementById('host-plus').addEventListener('click', () => {
+        if (hosts < 15) { hosts += 1; updateSimulator(); }
+      });
+      document.getElementById('client-minus').addEventListener('click', () => {
+        if (clients > 0) { clients -= 1; updateSimulator(); }
+      });
+      document.getElementById('client-plus').addEventListener('click', () => {
+        if (clients < 25) { clients += 1; updateSimulator(); }
+      });
+
+      // Tab 3 Route Switcher
+      const routePills = Array.from(document.querySelectorAll('.route-pill'));
+      const routeDetails = Array.from(document.querySelectorAll('.route-detail'));
+      routePills.forEach((pill) => {
+        pill.addEventListener('click', () => {
+          const target = pill.dataset.route;
+          routePills.forEach((p) => p.setAttribute('aria-pressed', p === pill ? 'true' : 'false'));
+          routeDetails.forEach((d) => d.classList.toggle('is-active', d.id === target));
+        });
+      });
+
+      // Copy buttons with fallback for sandboxed frames
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const text = btn.dataset.copy || '';
+          const markCopied = () => {
+            const old = btn.textContent;
+            btn.textContent = '已复制';
+            setTimeout(() => { btn.textContent = old; }, 1200);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(markCopied).catch(() => fallbackCopy(text, markCopied));
+          } else {
+            fallbackCopy(text, markCopied);
+          }
+        });
+      });
+
+      function fallbackCopy(text, onDone) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          onDone();
+        } catch (_) {}
+      }
+
+      const themeToggle = document.getElementById('theme-toggle');
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const root = document.documentElement;
+          const current = root.dataset.theme;
+          let isLight;
+          if (current === 'light' || current === 'dark') {
+            isLight = current === 'light';
+          } else {
+            isLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+          }
+          root.dataset.theme = isLight ? 'dark' : 'light';
+        });
+      }
+
+      updateSimulator();
+    })();
+  </script>
+</body>
+</html>
